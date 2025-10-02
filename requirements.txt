@@ -1,15 +1,13 @@
 streamlit==1.32.0
 streamlit-folium==0.18.0
 numpy==1.26.4
-pandas==2.2.1
 geopandas==0.14.3
-folium==0.16.0
-matplotlib==3.8.3
+folium==0.15.1
+shapely==2.0.1
+fiona==1.9.4
+rtree==1.0.1
+matplotlib==3.7.2
 seaborn==0.13.2
-shapely==2.0.3
-requests==2.31.0
-Pillow==10.4.0
-
-scipy
-plotly
+plotly==5.19.0
+pandas==2.1.1
 
