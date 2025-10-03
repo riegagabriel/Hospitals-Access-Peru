@@ -14,8 +14,15 @@ from streamlit_folium import st_folium
 
 URL_BASE = "https://github.com/riegagabriel/Hospitals-Access-Peru/raw/main/code/data/"
 
-# Hospitales (CSV)
-hospitales = pd.read_csv(URL_BASE + "IPRESS_utf8.csv")
+# Hospitales (CSV) -> convertir a GeoDataFrame
+hospitales_df = pd.read_csv(URL_BASE + "IPRESS_utf8.csv")
+
+# Asumimos que tu CSV tiene columnas "LONGITUD" y "LATITUD"
+hospitales = gpd.GeoDataFrame(
+    hospitales_df,
+    geometry=gpd.points_from_xy(hospitales_df.LONGITUD, hospitales_df.LATITUD),
+    crs="EPSG:4326"  # WGS84
+).to_crs(32718)
 
 # Centros poblados (ZIP)
 ccpp = gpd.read_file(URL_BASE + "CCPP_0.zip").to_crs(32718)
