@@ -35,11 +35,11 @@ st.write(f"Distritos: {len(df_distrito)} filas")
 st.write(f"Provincias: {len(df_provincia)} filas")
 
 ## Tabs 
-tab1, tab2, tab3 = st.tabs(['📊 Análisis Estadístico', '🗺️ Mapas y análisis estático', '🌍 Mapas dinámicos'])
+tab1, tab2, tab3 = st.tabs(['📊 Descripción', '🗺️ Mapas y análisis estático', '🌍 Mapas dinámicos'])
 
 # contenido de tab1 - Análisis Estadístico
 with tab1:
-    st.subheader('Análisis Estadístico por División Política')
+    st.subheader('Análisis descriptivo de los datos')
     
     if not df_departamento.empty and not df_distrito.empty and not df_provincia.empty:
         # Departamento
