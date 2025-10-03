@@ -3,34 +3,34 @@
 Aplicación Streamlit: Análisis Geoespacial de Hospitales en Perú
 Grupo 1-2-10
 
-ESTRUCTURA DE 3 TABS REQUERIDA:
-1. 🗂️ Data Description
-2. 🗺️ Static Maps & Department Analysis  
-3. 🌍 Dynamic Maps
+COMBINACIÓN: 
+- Estructura de tabs del compañero
+- Tus datos y análisis específicos
+- Tus mapas HTML pre-generados
 """
 
 import streamlit as st
 import pandas as pd
 import requests
 from io import StringIO
-import base64
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # ============================================
 # CONFIGURACIÓN DE LA PÁGINA
 # ============================================
 st.set_page_config(
-    page_title="Hospitales Perú - Análisis Geoespacial",
-    page_icon="🏥",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_title="Hospitales Perú - Análisis Geoespacial", 
+    layout="wide"
 )
+st.title('Dashboard Geoespacial de Hospitales en Perú')
 
 # ============================================
-# FUNCIONES DE CARGA DE DATOS
+# FUNCIONES DE CARGA DE DATOS (TUS DATOS)
 # ============================================
 @st.cache_data
 def load_hospital_data():
-    """Carga y procesa datos de hospitales IPRESS desde GitHub"""
+    """Carga y procesa datos de hospitales IPRESS desde GitHub (TUS FILTROS)"""
     try:
         url = "https://github.com/luchoravar/Hospitals-Access-Peru/raw/main/code/data/IPRESS.csv"
         r = requests.get(url)
@@ -41,7 +41,7 @@ def load_hospital_data():
         # Crear DataFrame
         df = pd.read_csv(StringIO(texto))
         
-        # FILTRADO SEGÚN REQUISITOS:
+        # TUS FILTROS ESPECÍFICOS:
         # 1. Solo hospitales operativos
         df = df[df["Condición"] == "EN FUNCIONAMIENTO"]
         
@@ -55,9 +55,9 @@ def load_hospital_data():
             "HOSPITALES O CLINICAS DE ATENCION ESPECIALIZADA"
         ])]
         
-        # Corregir UBIGEO
+        # Corregir UBIGEO (tu método)
         df['UBIGEO'] = df['UBIGEO'].astype(str).str.zfill(6)
-        df = df.rename(columns={'NORTE': 'lat', 'ESTE': 'lon'})
+        df = df.rename(columns={'NORTE': 'latitud', 'ESTE': 'longitud'})
         
         return df
         
@@ -67,7 +67,7 @@ def load_hospital_data():
 
 @st.cache_data
 def create_department_summary(df):
-    """Crea resumen por departamento para Tab 2"""
+    """Crea resumen por departamento (TU ANÁLISIS)"""
     hosp_por_dep = df.groupby("Departamento", as_index=False).agg(
         Total_hospitales=("Nombre del establecimiento", "count")
     )
@@ -79,7 +79,7 @@ def create_department_summary(df):
     return hosp_por_dep
 
 # ============================================
-# FUNCIONES PARA MAPAS
+# FUNCIONES PARA CARGAR TUS MAPAS HTML
 # ============================================
 def load_html_map(map_url):
     """Carga mapa HTML desde GitHub"""
@@ -99,32 +99,19 @@ def display_html_map(html_content, height=600):
     else:
         st.warning("El mapa no está disponible en este momento")
 
-# URLs de mapas pre-generados (debes tener estos en tu repo)
+# URLs DE TUS MAPAS HTML
 MAP_URLS = {
-    "static_choropleth": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/choropleth_hospitales_distrito.html",
-    "static_zero_hospitals": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/mapa_sin_hospitales.html", 
-    "static_top10": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/mapa_top10.html",
-    "dynamic_national": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/choropleth_hospitales_distrito.html",
-    "dynamic_proximity": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/task2_proximity_lima_loreto.html"
+    "choropleth_nacional": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/choropleth_hospitales_distrito.html",
+    "proximidad_lima_loreto": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/task2_proximity_lima_loreto.html",
+    "proximidad_general": "https://raw.githubusercontent.com/luchoravar/Hospitals-Access-Peru/main/proximidad_hospitales.html"
 }
 
 # ============================================
 # CARGAR DATOS
 # ============================================
-with st.spinner('Cargando datos de hospitales... ⏳'):
-    df = load_hospital_data()
-    hosp_por_dep = create_department_summary(df) if not df.empty else None
-
-# ============================================
-# SIDEBAR
-# ============================================
-st.sidebar.title("🏥 Análisis de Hospitales")
-st.sidebar.markdown("---")
-st.sidebar.info("""
-**Proyecto:** Análisis Geoespacial  
-**Fuente:** MINSA - IPRESS  
-**Grupo:** 1-2-10
-""")
+with st.spinner('Cargando datos y mapas...'):
+    df_hospitales = load_hospital_data()
+    hosp_por_dep = create_department_summary(df_hospitales) if not df_hospitales.empty else None
 
 # ============================================
 # TABS PRINCIPALES - ESTRUCTURA REQUERIDA
@@ -141,14 +128,14 @@ tab1, tab2, tab3 = st.tabs([
 with tab1:
     st.header("🗂️ Data Description")
     
-    if df.empty:
+    if df_hospitales.empty:
         st.error("No se pudieron cargar los datos")
     else:
         # UNIT OF ANALYSIS
         st.subheader("Unit of Analysis")
         st.write("""
-        **Operational public hospitals in Peru** - Establecimientos de salud públicos 
-        que se encuentran en funcionamiento según el registro IPRESS del Ministerio de Salud (MINSA).
+        **Operational public hospitals in Peru** - Hospitales públicos en funcionamiento 
+        según el registro IPRESS del Ministerio de Salud (MINSA).
         """)
         
         # DATA SOURCES
@@ -159,29 +146,26 @@ with tab1:
             st.write("""
             **📊 MINSA – IPRESS**
             - Registro nacional de establecimientos de salud
-            - Información sobre ubicación, capacidad y servicios
-            - Estado operativo de cada establecimiento
+            - 20,819 registros iniciales
+            - Filtrado a hospitales operativos con coordenadas válidas
             """)
         
         with col2:
             st.write("""
             **📍 Population Centers**  
             - Shapefile de centros poblados del Perú
-            - Ubicaciones geográficas de localidades
-            - Usado para análisis de proximidad
+            - Usado para análisis de proximidad en Lima y Loreto
+            - Cálculo de buffers de 10 km
             """)
         
         # FILTERING RULES
         st.subheader("Filtering Rules")
-        st.write("""
-        Se aplicaron los siguientes filtros para garantizar la calidad de los datos:
-        """)
         
         filtering_rules = [
-            "✅ **Condición operativa**: Solo establecimientos marcados como 'EN FUNCIONAMIENTO'",
-            "✅ **Coordenadas válidas**: Eliminados registros con coordenadas nulas o (0, 0)",
-            "✅ **Tipología hospitalaria**: Solo 'HOSPITALES O CLINICAS DE ATENCION GENERAL' y 'HOSPITALES O CLINICAS DE ATENCION ESPECIALIZADA'",
-            "✅ **UBIGEO completo**: Todos los códigos UBIGEO estandarizados a 6 dígitos"
+            "✅ **Operational status**: Solo 'EN FUNCIONAMIENTO'",
+            "✅ **Valid coordinates**: Eliminados registros con coordenadas nulas o (0, 0)",
+            "✅ **Hospital types**: Solo 'HOSPITALES O CLINICAS DE ATENCION GENERAL' y 'HOSPITALES O CLINICAS DE ATENCION ESPECIALIZADA'",
+            "✅ **UBIGEO standardization**: Todos los códigos estandarizados a 6 dígitos"
         ]
         
         for rule in filtering_rules:
@@ -194,39 +178,23 @@ with tab1:
         
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Total Hospitales", len(df))
+            st.metric("Total Hospitales", len(df_hospitales))
         with col2:
-            st.metric("Departamentos", df['Departamento'].nunique())
+            st.metric("Departamentos", df_hospitales['Departamento'].nunique())
         with col3:
-            st.metric("Registros Filtrados", "100% operativos")
+            st.metric("Registros Finales", f"{len(df_hospitales):,}")
         
         st.write("**Muestra de los datos:**")
         st.dataframe(
-            df[[
+            df_hospitales[[
                 'Nombre del establecimiento', 
                 'Departamento', 
                 'Provincia', 
                 'Clasificación',
                 'UBIGEO'
-            ]].head(10),
+            ]].head(8),
             use_container_width=True
         )
-        
-        # DATA QUALITY
-        st.subheader("Data Quality Summary")
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.write("**Completitud de datos:**")
-            st.write(f"• Registros iniciales: 20,819")
-            st.write(f"• Registros finales: {len(df)}")
-            st.write(f"• Tasa de retención: {(len(df)/20819*100):.1f}%")
-            
-        with col2:
-            st.write("**Cobertura geográfica:**")
-            st.write(f"• Departamentos cubiertos: {df['Departamento'].nunique()}")
-            st.write(f"• Provincias cubiertas: {df['Provincia'].nunique()}")
-            st.write(f"• Distritos cubiertos: {df['UBIGEO'].nunique()}")
 
 # ============================================
 # TAB 2: STATIC MAPS & DEPARTMENT ANALYSIS
@@ -234,37 +202,10 @@ with tab1:
 with tab2:
     st.header("🗺️ Static Maps & Department Analysis")
     
-    if df.empty:
-        st.error("No hay datos disponibles para generar mapas")
+    if df_hospitales.empty:
+        st.error("No hay datos disponibles")
     else:
-        # STATIC MAPS SECTION
-        st.subheader("Static Maps (GeoPandas)")
-        
-        # Map 1: Choropleth por distrito
-        st.write("**1. Distribución de Hospitales por Distrito**")
-        html_choropleth = load_html_map(MAP_URLS["static_choropleth"])
-        display_html_map(html_choropleth, height=500)
-        st.caption("Mapa coroplético que muestra la densidad de hospitales públicos por distrito en el Perú")
-        
-        st.markdown("---")
-        
-        # Map 2: Distritos sin hospitales
-        st.write("**2. Distritos sin Hospitales Públicos**")
-        html_zero = load_html_map(MAP_URLS["static_zero_hospitals"])
-        display_html_map(html_zero, height=500)
-        st.caption("Distritos que no cuentan con ningún hospital público operativo (resaltados en azul)")
-        
-        st.markdown("---")
-        
-        # Map 3: Top 10 distritos
-        st.write("**3. Top 10 Distritos con Más Hospitales**")
-        html_top10 = load_html_map(MAP_URLS["static_top10"])
-        display_html_map(html_top10, height=500)
-        st.caption("Los 10 distritos con mayor concentración de hospitales públicos")
-        
-        st.markdown("---")
-        
-        # DEPARTMENT ANALYSIS SECTION
+        # DEPARTMENT ANALYSIS (TU ANÁLISIS)
         st.subheader("Department Analysis")
         
         # Summary Table
@@ -290,14 +231,33 @@ with tab2:
                     f"{hosp_por_dep.iloc[-1]['Total_hospitales']} hospitales"
                 )
         
-        # Bar Chart (simulado con Streamlit)
+        # Bar Chart (como tu compañero pero con tus datos)
         st.write("**Gráfico de Barras - Hospitales por Departamento**")
         
-        # Preparamos datos para el gráfico
+        # Preparamos datos para el gráfico (top 15)
         chart_data = hosp_por_dep.set_index('Departamento')['Total_hospitales'].head(15)
-        st.bar_chart(chart_data)
         
-        st.caption("Distribución del número de hospitales públicos por departamento (top 15)")
+        fig, ax = plt.subplots(figsize=(10, 8))
+        sns.barplot(
+            x=chart_data.values,
+            y=chart_data.index,
+            ax=ax,
+            palette="Reds_r"
+        )
+        ax.set_title('Top 15 Departamentos con más Hospitales', fontsize=16)
+        ax.set_xlabel('Número de Hospitales')
+        st.pyplot(fig)
+        
+        st.markdown("---")
+        
+        # STATIC MAPS SECTION
+        st.subheader("Static Maps")
+        st.info("Mapas estáticos generados con GeoPandas - Visualización de distribución de hospitales")
+        
+        # Mapa 1: Choropleth por distrito
+        st.write("**1. Distribución de Hospitales por Distrito**")
+        html_choropleth = load_html_map(MAP_URLS["choropleth_nacional"])
+        display_html_map(html_choropleth, height=500)
 
 # ============================================
 # TAB 3: DYNAMIC MAPS
@@ -309,13 +269,13 @@ with tab3:
     st.subheader("National Choropleth + Markers")
     st.write("""
     **Mapa nacional interactivo** que combina:
-    - Capa coroplética por distrito
+    - Capa coroplética por distrito (Folium)
     - Clústeres de marcadores para hospitales individuales
     - Tooltips con información detallada
-    - Control de capas para personalizar la visualización
+    - Control de capas interactivo
     """)
     
-    html_national = load_html_map(MAP_URLS["dynamic_national"])
+    html_national = load_html_map(MAP_URLS["choropleth_nacional"])
     display_html_map(html_national, height=600)
     
     st.markdown("---")
@@ -323,40 +283,35 @@ with tab3:
     # PROXIMITY MAPS - LIMA & LORETO
     st.subheader("Proximity Analysis: Lima & Loreto")
     st.write("""
-    **Análisis de proximidad** para las regiones de Lima y Loreto:
-    - Radio de análisis: 10 km alrededor de cada centro poblado
+    **Análisis de proximidad** para las regiones de Lima y Loreto (radio de 10 km):
     - Identificación de centros más aislados y concentrados
     - Visualización de buffers y hospitales dentro del radio
-    - Comparación entre región costera (Lima) y selvática (Loreto)
+    - Comparación entre región costera y selvática
     """)
     
-    # Métricas de proximidad
+    # Métricas de proximidad (de tu análisis)
     col1, col2 = st.columns(2)
     
     with col1:
         st.write("**🏙️ Lima**")
-        st.write("• Región con mayor densidad hospitalaria")
+        st.write("• Mayor densidad hospitalaria")
         st.write("• Mejor acceso en áreas urbanas")
-        st.write("• Desafíos en zonas periurbanas")
+        st.write("• Centros concentrados vs aislados")
     
     with col2:
         st.write("**🌳 Loreto**")
-        st.write("• Región con mayor desafío de acceso")
-        st.write("• Baja densidad hospitalaria")
-        st.write("• Aislamiento en comunidades ribereñas")
+        st.write("• Mayor desafío de acceso")
+        st.write("• Baja densidad hospitalaria") 
+        st.write("• Aislamiento en comunidades")
     
-    html_proximity = load_html_map(MAP_URLS["dynamic_proximity"])
+    html_proximity = load_html_map(MAP_URLS["proximidad_lima_loreto"])
     display_html_map(html_proximity, height=600)
     
-    # Leyenda explicativa
-    st.info("""
-    **🎨 Leyenda del Mapa de Proximidad:**
-    - 🔴 **Lima - Aislado**: Centro poblado con menor acceso a hospitales en Lima
-    - 🟢 **Lima - Concentrado**: Centro poblado con mayor acceso a hospitales en Lima  
-    - 🟠 **Loreto - Aislado**: Centro poblado con menor acceso a hospitales en Loreto
-    - 🔵 **Loreto - Concentrado**: Centro poblado con mayor acceso a hospitales en Loreto
-    - ● **Puntos**: Hospitales dentro del radio de 10 km
-    """)
+    # Mapa adicional de proximidad general
+    st.markdown("---")
+    st.subheader("Mapa de Proximidad General")
+    html_general = load_html_map(MAP_URLS["proximidad_general"])
+    display_html_map(html_general, height=500)
 
 # ============================================
 # FOOTER
@@ -364,6 +319,6 @@ with tab3:
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: gray;'>
-    <p><b>Análisis Geoespacial de Hospitales en Perú</b> | Grupo 1-2-10 | MINSA IPRESS</p>
+    <p><b>Análisis Geoespacial de Hospitales en Perú</b> | Grupo 1-2-10 | Fuente: MINSA IPRESS</p>
 </div>
 """, unsafe_allow_html=True)
