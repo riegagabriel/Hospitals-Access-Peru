@@ -1,123 +1,143 @@
+# -*- coding: utf-8 -*-
+# streamlit run app.py
+
 import streamlit as st
-import geopandas as gpd
 import pandas as pd
+import geopandas as gpd
+import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+import requests
 import folium
+from folium.plugins import MarkerCluster
+from shapely.geometry import Point
 from streamlit_folium import st_folium
 
-# ================================
-# 📂 Carga de datos desde GitHub
-# ================================
+st.set_page_config(page_title="Hospitales en Perú", layout="wide")
 
-URL_BASE = "https://github.com/riegagabriel/Hospitals-Access-Peru/raw/main/code/data/"
+st.title("🏥 Análisis Geoespacial de Hospitales en Perú")
 
-# Hospitales (CSV)
-hospitales_df = pd.read_csv(URL_BASE + "IPRESS_utf8.csv")
+# -------------------------
+# 1) Cargar y limpiar datos
+# -------------------------
+@st.cache_data
+def load_data():
+    url = "https://github.com/luchoravar/Hospitals-Access-Peru/raw/main/code/data/IPRESS.csv"
+    r = requests.get(url)
+    r.raise_for_status()
+    texto = r.content.decode("latin1", errors="ignore")
+    with open("IPRESS_utf8.csv", "w", encoding="utf-8") as f:
+        f.write(texto)
+    df = pd.read_csv("IPRESS_utf8.csv")
+    return df
 
-# Convertir a GeoDataFrame
-hospitales = gpd.GeoDataFrame(
-    hospitales_df,
-    geometry=gpd.points_from_xy(hospitales_df["LONGITUD"], hospitales_df["LATITUD"]),
-    crs="EPSG:4326"
-).to_crs(32718)
+df = load_data()
+st.write("Datos originales:", df.shape)
 
-# Centros poblados (ZIP)
-CCPP = gpd.read_file(URL_BASE + "CCPP_0.zip").to_crs(32718)
+# Filtrar hospitales operativos con coordenadas válidas
+df = df[df["Condición"] == "EN FUNCIONAMIENTO"]
+df = df.dropna(subset=["NORTE", "ESTE"])
+df = df[(df["NORTE"] != 0) & (df["ESTE"] != 0)]
+df = df[df["Clasificación"].isin([
+    "HOSPITALES O CLINICAS DE ATENCION GENERAL",
+    "HOSPITALES O CLINICAS DE ATENCION ESPECIALIZADA"
+])]
+df["UBIGEO"] = df["UBIGEO"].astype(str).str.zfill(6)
 
-# Distritos (ZIP de geoBoundaries)
-maps = gpd.read_file(URL_BASE + "geoBoundaries-PER-ADM2-all.zip").to_crs(32718)
+st.write("Datos filtrados (hospitales operativos con coordenadas):", df.shape)
 
+# -------------------------
+# 2) Shapefile Distritos
+# -------------------------
+@st.cache_data
+def load_shapefile():
+    maps = gpd.read_file("https://github.com/luchoravar/Hospitals-Access-Peru/raw/main/code/data/Distritos/DISTRITOS.shp")
+    maps = maps[["IDDIST", "geometry"]].rename(columns={"IDDIST": "UBIGEO"})
+    maps["UBIGEO"] = maps["UBIGEO"].astype(str).astype(int)
+    maps = maps.to_crs(epsg=4326)
+    return maps
 
-# ================================
-# 📌 Task 1: Análisis Distrital
-# ================================
-def task1_distritos():
-    st.subheader("Task 1: Hospitales por Distrito")
+maps = load_shapefile()
 
-    # Join espacial hospitales ↔ distritos
-    hospitales_por_distrito = gpd.sjoin(hospitales, maps, how="left").groupby("DISTRITO").size().reset_index(name="n_hospitales")
-    distritos_local = maps.merge(hospitales_por_distrito, on="DISTRITO", how="left").fillna({"n_hospitales": 0})
+# -------------------------
+# 3) Conteo hospitales por distrito
+# -------------------------
+tabla_frecuencias_ubigeo = df["UBIGEO"].value_counts().reset_index()
+tabla_frecuencias_ubigeo.columns = ["UBIGEO", "Frecuencia"]
+tabla_frecuencias_ubigeo["UBIGEO"] = tabla_frecuencias_ubigeo["UBIGEO"].astype(int)
 
-    distritos_sin = distritos_local[distritos_local["n_hospitales"] == 0]
+dataset = maps.merge(tabla_frecuencias_ubigeo, on="UBIGEO", how="left")
+dataset["Frecuencia"] = dataset["Frecuencia"].fillna(0).astype(int)
 
-    st.markdown("**Distritos sin hospitales**")
-    st.write(distritos_sin[["DEPARTAMEN", "PROVINCIA", "DISTRITO"]])
+st.subheader("📊 Conteo de hospitales por distrito")
+st.dataframe(tabla_frecuencias_ubigeo.head(15))
 
-    top10 = distritos_local.sort_values("n_hospitales", ascending=False).head(10)
-    st.markdown("**Top 10 distritos con más hospitales**")
-    st.write(top10[["DEPARTAMEN", "PROVINCIA", "DISTRITO", "n_hospitales"]])
+# -------------------------
+# 4) Mapa estático (matplotlib)
+# -------------------------
+fig, ax = plt.subplots(figsize=(8, 8))
+dataset.plot(
+    column="Frecuencia",
+    cmap="Reds",
+    linewidth=0.5,
+    edgecolor="gray",
+    legend=True,
+    ax=ax
+)
+ax.set_title("Hospitales públicos por distrito", fontsize=14, fontweight="bold")
+st.pyplot(fig)
 
-    # 🔹 Mapa Folium
-    m1 = folium.Map(location=[-9.19, -75.015], zoom_start=5)
+# -------------------------
+# 5) Mapa interactivo (folium)
+# -------------------------
+st.subheader("🗺️ Mapa interactivo con Folium")
 
-    folium.GeoJson(
-        distritos_local,
-        style_function=lambda x: {
-            "fillColor": "transparent",
-            "color": "black",
-            "weight": 0.5,
-        },
-        tooltip=folium.GeoJsonTooltip(fields=["DEPARTAMEN", "PROVINCIA", "DISTRITO", "n_hospitales"])
-    ).add_to(m1)
+# GeoDataFrame hospitales
+hospitales_gdf = gpd.GeoDataFrame(
+    df.copy(),
+    geometry=gpd.points_from_xy(df["ESTE"], df["NORTE"]),
+    crs="EPSG:32718"
+).to_crs(epsg=4326)
 
-    for idx, row in hospitales.iterrows():
-        folium.CircleMarker(
-            location=[row.geometry.y, row.geometry.x],
-            radius=2,
-            color="red",
-            fill=True,
-            fill_opacity=0.7
-        ).add_to(m1)
+dataset_choro = dataset.copy()
+dataset_choro["UBIGEO"] = dataset_choro["UBIGEO"].astype(str)
+geojson_distritos = dataset_choro.to_json()
 
-    st.subheader("🌍 Mapa Folium - Hospitales por distrito")
-    st_folium(m1, width=700, height=500)
+m = folium.Map(location=[-9.19, -75.02], zoom_start=5, tiles="CartoDB positron")
 
+# Choropleth
+folium.Choropleth(
+    geo_data=geojson_distritos,
+    data=dataset_choro,
+    columns=["UBIGEO", "Frecuencia"],
+    key_on="feature.properties.UBIGEO",
+    fill_color="YlOrRd",
+    fill_opacity=0.8,
+    line_opacity=0.2,
+    legend_name="Número de hospitales por distrito",
+    nan_fill_color="white"
+).add_to(m)
 
-# ================================
-# 📌 Task 2: Lima & Loreto
-# ================================
-def task2_lima_loreto():
-    st.subheader("Task 2: Distritos y CCPP en Lima y Loreto")
+# Tooltip
+folium.GeoJson(
+    data=geojson_distritos,
+    name="Distritos",
+    tooltip=folium.GeoJsonTooltip(
+        fields=["UBIGEO", "Frecuencia"],
+        aliases=["UBIGEO:", "N° hospitales:"]
+    ),
+    style_function=lambda x: {"fillOpacity": 0, "color": "none"}
+).add_to(m)
 
-    # Filtrar Lima y Loreto
-    centros_sel = CCPP[CCPP["DEP"].isin(["LIMA", "LORETO"])].copy()
-    hosp_sel = maps[maps["DEPARTAMEN"].isin(["LIMA", "LORETO"])].copy()
+# Hospitales cluster
+mc = MarkerCluster(name="Hospitales").add_to(m)
+for _, row in hospitales_gdf.iterrows():
+    popup = f"{row['Nombre del establecimiento']}<br>{row['Departamento']}"
+    folium.Marker(
+        location=[row.geometry.y, row.geometry.x],
+        popup=popup,
+        icon=folium.Icon(color="red", icon="plus-sign")
+    ).add_to(mc)
 
-    # Reproyectar
-    centros_sel = centros_sel.to_crs("EPSG:32718")
-    hosp_sel = hosp_sel.to_crs("EPSG:32718")
-
-    # 🔹 Mapa Folium
-    m2 = folium.Map(location=[-9.19, -75.015], zoom_start=6)
-
-    folium.GeoJson(
-        hosp_sel,
-        name="Distritos",
-        style_function=lambda x: {
-            "fillColor": "transparent",
-            "color": "blue",
-            "weight": 1,
-        },
-        tooltip=folium.GeoJsonTooltip(fields=["DEPARTAMEN", "PROVINCIA", "DISTRITO"])
-    ).add_to(m2)
-
-    for idx, row in centros_sel.iterrows():
-        folium.Marker(
-            location=[row.geometry.y, row.geometry.x],
-            popup=f"Centro poblado: {row['NOMBRE']}",
-            icon=folium.Icon(color="red", icon="info-sign")
-        ).add_to(m2)
-
-    st.subheader("🌍 Mapa Folium - Lima y Loreto")
-    st_folium(m2, width=700, height=500)
-
-
-# ================================
-# 🚀 Main
-# ================================
-st.title("📊 Acceso a Hospitales en Perú")
-
-task1_distritos()
-task2_lima_loreto()
-
+# Render folium en Streamlit
+st_folium(m, width=1000, height=600)
