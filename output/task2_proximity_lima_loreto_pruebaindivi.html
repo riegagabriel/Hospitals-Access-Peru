@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_de029d9f0494555f342047fca7437d96 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+<div style="position: fixed; bottom: 50px; right: 50px; width: 280px;
+            background: white; border:2px solid grey; z-index:9999;
+            font-size:13px; padding: 10px; border-radius: 5px;">
+<h4>📊 Leyenda</h4>
+<p><span style="color:red;">⭕</span> Lima aislado</p>
+<p><span style="color:green;">⭕</span> Lima concentrado</p>
+<p><span style="color:orange;">⭕</span> Loreto aislado</p>
+<p><span style="color:blue;">⭕</span> Loreto concentrado</p>
+<p style="font-size:11px; color:gray;">● Hospitales dentro del radio</p>
+</div>
+    
+            <div class="folium-map" id="map_de029d9f0494555f342047fca7437d96" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_de029d9f0494555f342047fca7437d96 = L.map(
+                "map_de029d9f0494555f342047fca7437d96",
+                {
+                    center: [-9.19, -75.0152],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 6,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_a6eb00b2a6f3578a02b25f77dbab0b68 = L.tileLayer(
+                "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 19,
+  "maxNativeZoom": 19,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors",
+  "subdomains": "abc",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_a6eb00b2a6f3578a02b25f77dbab0b68.addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+            var circle_7509d7553b24435193f5814ffe087837 = L.circle(
+                [-12.05101303399993, -75.54816365499994],
+                {"bubblingMouseEvents": true, "color": "red", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "red", "fillOpacity": 0.15, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10000, "stroke": true, "weight": 3}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+        var popup_491c93c9dbbc6dbea862dc03eec30238 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_78db96f2b5106b41136a312f9e75a673 = $(`<div id="html_78db96f2b5106b41136a312f9e75a673" style="width: 100.0%; height: 100.0%;">🔴 LIMA - Aislado<br>RIEGOPAMPA<br>Hosp: 0</div>`)[0];
+                popup_491c93c9dbbc6dbea862dc03eec30238.setContent(html_78db96f2b5106b41136a312f9e75a673);
+            
+        
+
+        circle_7509d7553b24435193f5814ffe087837.bindPopup(popup_491c93c9dbbc6dbea862dc03eec30238)
+        ;
+
+        
+    
+    
+            var marker_64149f8dce67c963adeb36229ec687fa = L.marker(
+                [-12.05101303399993, -75.54816365499994],
+                {
+}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+            var icon_18b36b67166d2706080e5fbe1b9c3deb = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "red",
+  "iconColor": "white",
+  "icon": "home",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_64149f8dce67c963adeb36229ec687fa.bindTooltip(
+                `<div>
+                     🔴 LIMA - Aislado - RIEGOPAMPA: 0 hospitales
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_64149f8dce67c963adeb36229ec687fa.setIcon(icon_18b36b67166d2706080e5fbe1b9c3deb);
+            
+    
+            var circle_80e37ee3dfd7adb1b6f2ead7046d1826 = L.circle(
+                [-12.074695144999964, -77.01723979199994],
+                {"bubblingMouseEvents": true, "color": "green", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "green", "fillOpacity": 0.15, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10000, "stroke": true, "weight": 3}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+        var popup_a5fb0a1d3b5404b6abe7a18670ca8fe5 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_012ccb03e5803e3b1127637f30eb155a = $(`<div id="html_012ccb03e5803e3b1127637f30eb155a" style="width: 100.0%; height: 100.0%;">🟢 LIMA - Concentrado<br>LA VICTORIA<br>Hosp: 28</div>`)[0];
+                popup_a5fb0a1d3b5404b6abe7a18670ca8fe5.setContent(html_012ccb03e5803e3b1127637f30eb155a);
+            
+        
+
+        circle_80e37ee3dfd7adb1b6f2ead7046d1826.bindPopup(popup_a5fb0a1d3b5404b6abe7a18670ca8fe5)
+        ;
+
+        
+    
+    
+            var marker_5d9f84fbb66313d47bea61e29d171dba = L.marker(
+                [-12.074695144999964, -77.01723979199994],
+                {
+}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+            var icon_493b852cc1721780ed287fb8a03a7083 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "green",
+  "iconColor": "white",
+  "icon": "home",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_5d9f84fbb66313d47bea61e29d171dba.bindTooltip(
+                `<div>
+                     🟢 LIMA - Concentrado - LA VICTORIA: 28 hospitales
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_5d9f84fbb66313d47bea61e29d171dba.setIcon(icon_493b852cc1721780ed287fb8a03a7083);
+            
+    
+            var circle_821ca19a93dfb53c762e4acad07845f4 = L.circle(
+                [-8.072162108999988, -75.61701757899993],
+                {"bubblingMouseEvents": true, "color": "orange", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "orange", "fillOpacity": 0.15, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10000, "stroke": true, "weight": 3}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+        var popup_c1efd1c41e0b0d534e8f181491dc4327 = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_c911d31f7d5b369d76f669176dbcc12a = $(`<div id="html_c911d31f7d5b369d76f669176dbcc12a" style="width: 100.0%; height: 100.0%;">🔴 LORETO - Aislado<br>PUEBLO NUEVO<br>Hosp: 1</div>`)[0];
+                popup_c1efd1c41e0b0d534e8f181491dc4327.setContent(html_c911d31f7d5b369d76f669176dbcc12a);
+            
+        
+
+        circle_821ca19a93dfb53c762e4acad07845f4.bindPopup(popup_c1efd1c41e0b0d534e8f181491dc4327)
+        ;
+
+        
+    
+    
+            var marker_eb300a94f6f21814990632dd8793294f = L.marker(
+                [-8.072162108999988, -75.61701757899993],
+                {
+}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+            var icon_e6f9e5ce3f0f0126692d660dccaba5ae = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "orange",
+  "iconColor": "white",
+  "icon": "home",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_eb300a94f6f21814990632dd8793294f.bindTooltip(
+                `<div>
+                     🔴 LORETO - Aislado - PUEBLO NUEVO: 1 hospitales
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_eb300a94f6f21814990632dd8793294f.setIcon(icon_e6f9e5ce3f0f0126692d660dccaba5ae);
+            
+    
+            var circle_94223b62fcc37a66bcc8b0ec90c6a00c = L.circle(
+                [-3.773320311999962, -73.16178124999993],
+                {"bubblingMouseEvents": true, "color": "blue", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "blue", "fillOpacity": 0.15, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 10000, "stroke": true, "weight": 3}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+        var popup_f39abdf71e2b2a4d4a2ce2c0facdbdde = L.popup({
+  "maxWidth": "100%",
+});
+
+        
+            
+                var html_b0666c2b77fb4fd4d08621661c436815 = $(`<div id="html_b0666c2b77fb4fd4d08621661c436815" style="width: 100.0%; height: 100.0%;">🟢 LORETO - Concentrado<br>SAN ANTONIO DE GALLITO<br>Hosp: 6</div>`)[0];
+                popup_f39abdf71e2b2a4d4a2ce2c0facdbdde.setContent(html_b0666c2b77fb4fd4d08621661c436815);
+            
+        
+
+        circle_94223b62fcc37a66bcc8b0ec90c6a00c.bindPopup(popup_f39abdf71e2b2a4d4a2ce2c0facdbdde)
+        ;
+
+        
+    
+    
+            var marker_4cee305059a1b0910a38e410baf090b0 = L.marker(
+                [-3.773320311999962, -73.16178124999993],
+                {
+}
+            ).addTo(map_de029d9f0494555f342047fca7437d96);
+        
+    
+            var icon_9ffbf55b105057d0b1057d112356b006 = L.AwesomeMarkers.icon(
+                {
+  "markerColor": "blue",
+  "iconColor": "white",
+  "icon": "home",
+  "prefix": "fa",
+  "extraClasses": "fa-rotate-0",
+}
+            );
+        
+    
+            marker_4cee305059a1b0910a38e410baf090b0.bindTooltip(
+                `<div>
+                     🟢 LORETO - Concentrado - SAN ANTONIO DE GALLITO: 6 hospitales
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+                marker_4cee305059a1b0910a38e410baf090b0.setIcon(icon_9ffbf55b105057d0b1057d112356b006);
+            
+</script>
+</html>
