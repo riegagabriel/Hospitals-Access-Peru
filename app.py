@@ -1,122 +1,118 @@
 # app.py
+# -*- coding: utf-8 -*-
 import streamlit as st
-import geopandas as gpd
 import pandas as pd
+import geopandas as gpd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import folium
+from folium.plugins import MarkerCluster
 from streamlit_folium import st_folium
+import requests
 
-# ================================
-# 📂 Carga de datos desde GitHub
-# ================================
+st.set_page_config(layout="wide", page_title="Hospitales Perú")
 
+# ------------------------------
+# CARGA DE DATOS
+# ------------------------------
+@st.cache_data
+def cargar_datos():
+    url = "https://github.com/luchoravar/Hospitals-Access-Peru/raw/main/code/data/IPRESS.csv"
+    r = requests.get(url)
+    texto = r.content.decode("latin1", errors="ignore")
+    with open("IPRESS_utf8.csv", "w", encoding="utf-8") as f:
+        f.write(texto)
+    df = pd.read_csv("IPRESS_utf8.csv")
 
-URL_BASE = "https://github.com/riegagabriel/Hospitals-Access-Peru/raw/main/code/data/"
+    # Filtro hospitales en funcionamiento con coordenadas válidas
+    df = df[df["Condición"] == "EN FUNCIONAMIENTO"]
+    df = df.dropna(subset=["NORTE", "ESTE"])
+    df = df[(df["NORTE"] != 0) & (df["ESTE"] != 0)]
+    df = df[df["Clasificación"].isin([
+        "HOSPITALES O CLINICAS DE ATENCION GENERAL",
+        "HOSPITALES O CLINICAS DE ATENCION ESPECIALIZADA"
+    ])]
 
-# Hospitales (CSV) -> convertir a GeoDataFrame
-hospitales_df = pd.read_csv(URL_BASE + "IPRESS_utf8.csv")
+    df["UBIGEO"] = df["UBIGEO"].astype(str).str.zfill(6)
+    return df
 
-# Asumimos que tu CSV tiene columnas "LONGITUD" y "LATITUD"
-hospitales = gpd.GeoDataFrame(
-    hospitales_df,
-    geometry=gpd.points_from_xy(hospitales_df.LONGITUD, hospitales_df.LATITUD),
-    crs="EPSG:4326"  # WGS84
-).to_crs(32718)
+df = cargar_datos()
+st.title("🏥 Análisis Geoespacial de Hospitales en Perú")
+st.write(f"Total hospitales analizados: **{df.shape[0]}**")
 
-# Centros poblados (ZIP)
-ccpp = gpd.read_file(URL_BASE + "CCPP_0.zip").to_crs(32718)
+st.dataframe(df.head())
 
-# Distritos (ZIP de geoBoundaries)
-distritos = gpd.read_file(URL_BASE + "geoBoundaries-PER-ADM2-all.zip").to_crs(32718)
+# ------------------------------
+# MAPA ESTÁTICO DISTRITAL
+# ------------------------------
+@st.cache_data
+def cargar_mapas():
+    maps = gpd.read_file("https://github.com/luchoravar/Hospitals-Access-Peru/raw/main/code/data/Distritos/DISTRITOS.shp")
+    maps = maps[['IDDIST', 'geometry']]
+    maps = maps.rename({'IDDIST':'UBIGEO'}, axis=1)
+    maps["UBIGEO"] = maps["UBIGEO"].astype(str).str.zfill(6)
+    maps = maps.to_crs(epsg=4326)
+    return maps
 
+maps = cargar_mapas()
 
-# ================================
-# 📌 Task 1: Análisis Distrital
-# ================================
-def task1_distritos():
-    st.subheader("Task 1: Hospitales por Distrito")
+# Frecuencia por distrito
+tabla_frecuencias = df['UBIGEO'].value_counts().reset_index()
+tabla_frecuencias.columns = ['UBIGEO', 'Frecuencia']
+dataset = maps.merge(tabla_frecuencias, how="left", on="UBIGEO").fillna(0)
 
-    hospitales_por_distrito = gpd.sjoin(hospitales, distritos, how="left").groupby("distrito").size().reset_index(name="n_hospitales")
-    distritos_local = distritos.merge(hospitales_por_distrito, on="distrito", how="left").fillna({"n_hospitales": 0})
+# Plot estático
+st.subheader("Mapa estático: Número de hospitales por distrito")
+fig, ax = plt.subplots(figsize=(8, 8))
+dataset.plot(column="Frecuencia", cmap="Reds", linewidth=0.5, edgecolor="gray", ax=ax, legend=True)
+ax.set_title("Hospitales públicos por distrito", fontsize=14)
+st.pyplot(fig)
 
-    distritos_sin = distritos_local[distritos_local["n_hospitales"] == 0]
+# ------------------------------
+# BARRAS POR DEPARTAMENTO
+# ------------------------------
+hosp_por_dep = df.groupby("Departamento", as_index=False).agg(
+    Total_hospitales=("Nombre del establecimiento", "count")
+).sort_values(by="Total_hospitales", ascending=False)
 
-    st.markdown("**Distritos sin hospitales**")
-    st.write(distritos_sin[["distrito"]])
+st.subheader("Número de hospitales por departamento")
+fig, ax = plt.subplots(figsize=(8, 6))
+sns.barplot(data=hosp_por_dep, x="Total_hospitales", y="Departamento", palette="Reds_r", ax=ax)
+ax.set_title("Hospitales por departamento", fontsize=14)
+st.pyplot(fig)
 
-    top10 = distritos_local.sort_values("n_hospitales", ascending=False).head(10)
-    st.markdown("**Top 10 distritos con más hospitales**")
-    st.write(top10[["distrito", "n_hospitales"]])
+# ------------------------------
+# MAPA INTERACTIVO FOLIUM
+# ------------------------------
+st.subheader("Mapa interactivo: Hospitales y densidad distrital")
 
-    fig, ax = plt.subplots(figsize=(8, 8))
-    distritos_local.plot(ax=ax, color="lightgrey", edgecolor="black")
-    hospitales.plot(ax=ax, color="red", markersize=5, label="Hospitales")
-    distritos_sin.boundary.plot(ax=ax, color="blue", linewidth=2, label="Distritos sin hospitales")
-    plt.legend()
-    st.pyplot(fig)
+# GeoDataFrame de hospitales
+hospitales_gdf = gpd.GeoDataFrame(
+    df.copy(),
+    geometry=gpd.points_from_xy(df["ESTE"], df["NORTE"]),
+    crs="EPSG:32718"
+).to_crs(epsg=4326)
 
-# ================================
-# 📌 Task 2: Análisis Departamental
-# ================================
-def task2_departamentos():
-    st.subheader("Task 2: Análisis Departamental")
+# Choropleth
+geojson_distritos = dataset.to_json()
+m = folium.Map(location=[-9.19, -75.02], zoom_start=5, tiles="CartoDB positron")
 
-    hospitales_por_dep = gpd.sjoin(hospitales, departamentos, how="left").groupby("departamento").size().reset_index(name="n_hospitales")
-    departamentos_local = departamentos.merge(hospitales_por_dep, on="departamento", how="left").fillna({"n_hospitales": 0})
+folium.Choropleth(
+    geo_data=geojson_distritos,
+    data=dataset,
+    columns=["UBIGEO", "Frecuencia"],
+    key_on="feature.properties.UBIGEO",
+    fill_color="YlOrRd",
+    legend_name="Número de hospitales por distrito"
+).add_to(m)
 
-    st.write(hospitales_por_dep.sort_values("n_hospitales", ascending=False))
+marker_cluster = MarkerCluster(name="Hospitales").add_to(m)
+for _, row in hospitales_gdf.iterrows():
+    folium.Marker(
+        location=[row.geometry.y, row.geometry.x],
+        popup=f"{row.get('Nombre del establecimiento','Hospital')}<br>{row.get('Departamento','')}"
+    ).add_to(marker_cluster)
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    sns.barplot(data=hospitales_por_dep.sort_values("n_hospitales", ascending=False), 
-                x="n_hospitales", y="departamento", ax=ax, palette="viridis")
-    st.pyplot(fig)
+st_folium(m, width=800, height=600)
 
-    fig, ax = plt.subplots(figsize=(8, 8))
-    departamentos_local.plot(column="n_hospitales", cmap="OrRd", legend=True, ax=ax, edgecolor="black")
-    plt.title("Número de Hospitales por Departamento")
-    st.pyplot(fig)
-
-# ================================
-# 📌 Task 3: Proximidad (Centros Poblados)
-# ================================
-def task3_proximidad():
-    st.subheader("Task 3: Análisis de Proximidad (10 km)")
-
-    centros["buffer_10km"] = centros.geometry.buffer(10000)
-    conteo_hosp = centros.buffer_10km.apply(lambda buf: hospitales.within(buf).sum())
-    centros["n_hospitales_10km"] = conteo_hosp
-
-    aislado = centros.loc[centros["n_hospitales_10km"].idxmin()]
-    concentrado = centros.loc[centros["n_hospitales_10km"].idxmax()]
-
-    st.write("📍 Centro más aislado:", aislado["nombre"], "(", aislado["n_hospitales_10km"], "hospitales en 10 km )")
-    st.write("📍 Centro más concentrado:", concentrado["nombre"], "(", concentrado["n_hospitales_10km"], "hospitales en 10 km )")
-
-    m = folium.Map(location=[-9.2, -75.0], zoom_start=6)
-    folium.Circle(location=[aislado.geometry.y, aislado.geometry.x], radius=10000, color="red", 
-                  tooltip=f"{aislado['nombre']} ({aislado['n_hospitales_10km']} hospitales)").add_to(m)
-    folium.Circle(location=[concentrado.geometry.y, concentrado.geometry.x], radius=10000, color="green", 
-                  tooltip=f"{concentrado['nombre']} ({concentrado['n_hospitales_10km']} hospitales)").add_to(m)
-    st_folium(m, width=700, height=500)
-
-# ================================
-# 📌 Task 4: Streamlit App
-# ================================
-def main():
-    st.title("🩺 Análisis de Hospitales en el Perú")
-
-    tabs = st.tabs(["Task 1: Distritos", "Task 2: Departamentos", "Task 3: Proximidad"])
-
-    with tabs[0]:
-        task1_distritos()
-
-    with tabs[1]:
-        task2_departamentos()
-
-    with tabs[2]:
-        task3_proximidad()
-
-if __name__ == "__main__":
-    main()
 
