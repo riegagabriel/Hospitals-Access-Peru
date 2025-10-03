@@ -10,13 +10,19 @@ from streamlit_folium import st_folium
 # ================================
 # 📂 Carga de datos desde GitHub
 # ================================
-# ⚠️ Reemplaza "TU_USUARIO" y "TU_REPO" con tu usuario y repositorio de GitHub
-URL_BASE = "https://github.com/riegagabriel/Hospitals-Access-Peru/tree/main/code/data"
 
-hospitales = gpd.read_file(URL_BASE + "hospitales.shp").to_crs(32718)
-distritos = gpd.read_file(URL_BASE + "distritos.shp").to_crs(32718)
-departamentos = gpd.read_file(URL_BASE + "departamentos.shp").to_crs(32718)
-centros = gpd.read_file(URL_BASE + "centros_poblados.shp").to_crs(32718)
+
+URL_BASE = "https://github.com/riegagabriel/Hospitals-Access-Peru/raw/main/code/data/"
+
+# Hospitales (CSV)
+hospitales = pd.read_csv(URL_BASE + "IPRESS_utf8.csv")
+
+# Centros poblados (ZIP)
+ccpp = gpd.read_file(URL_BASE + "CCPP_0.zip").to_crs(32718)
+
+# Distritos (ZIP de geoBoundaries)
+distritos = gpd.read_file(URL_BASE + "geoBoundaries-PER-ADM2-all.zip").to_crs(32718)
+
 
 # ================================
 # 📌 Task 1: Análisis Distrital
