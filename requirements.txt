@@ -19,9 +19,3 @@ notebook>=7.0
 jupyterlab>=3.0
 ipykernel>=6.0
 
-#For creating interactive leaflet map
-!pip install folium
-!pip install branca
-
-#For developing the dashboard
-!pip install streamlit
